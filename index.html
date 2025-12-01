@@ -226,28 +226,32 @@
                     const img = new Image();
                     const objectUrl = URL.createObjectURL(file);
                     
-                    img.onload = () => {
-                        const needsFix = (img.width % 4 !== 0) || (img.height % 4 !== 0);
-                        let newW = img.width;
-                        let newH = img.height;
+					img.onload = () => {
+						// ✅ 해결: 파일 원본의 실제 픽셀 크기(naturalWidth/Height)를 사용
+						const realW = img.naturalWidth;
+						const realH = img.naturalHeight;
 
-                        if (needsFix) {
-                            newW = Math.ceil(img.width / 4) * 4;
-                            newH = Math.ceil(img.height / 4) * 4;
-                        }
+						const needsFix = (realW % 4 !== 0) || (realH % 4 !== 0);
+						let newW = realW;
+						let newH = realH;
 
-                        fileQueue.push({
-                            file: file,
-                            imgObj: img, 
-                            src: objectUrl,
-                            w: img.width,
-                            h: img.height,
-                            needsFix: needsFix,
-                            newW: newW,
-                            newH: newH
-                        });
-                        resolve();
-                    };
+						if (needsFix) {
+							newW = Math.ceil(realW / 4) * 4;
+							newH = Math.ceil(realH / 4) * 4;
+						}
+
+						fileQueue.push({
+							file: file,
+							imgObj: img, 
+							src: objectUrl,
+							w: realW,  // 원본 크기 저장
+							h: realH,
+							needsFix: needsFix,
+							newW: newW,
+							newH: newH
+						});
+						resolve();
+					};
                     img.onerror = resolve; 
                     img.src = objectUrl;
                 });
