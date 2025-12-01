@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>리썰 컴퍼니 텍스처 오토 픽서</title>
+    <title>리썰 컴퍼니 텍스처 오토 픽서 (성능조절판)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -27,6 +27,25 @@
             100% { transform: translateY(-10px) scale(1.2); opacity: 0; }
         }
         .fa-mug-hot:hover { animation: steam 1s infinite; }
+
+        /* 슬라이더 커스텀 */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #374151;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8 flex flex-col items-center relative">
@@ -42,7 +61,6 @@
 
         <!-- Upload Zone -->
         <div id="dropZone" class="border-2 border-dashed border-gray-600 rounded-2xl p-12 text-center transition-all duration-300 cursor-pointer hover:border-orange-500 hover:bg-gray-800/50 bg-gray-800 mb-8 relative group shadow-lg">
-            <!-- webkitdirectory: 폴더 선택 지원 -->
             <input type="file" id="fileInput" multiple webkitdirectory directory class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
             <div class="pointer-events-none group-hover:scale-105 transition-transform duration-300">
                 <div class="bg-gray-700 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500 text-3xl">
@@ -54,21 +72,37 @@
         </div>
 
         <!-- Dashboard -->
-        <div id="dashboard" class="hidden flex-col md:flex-row gap-4 mb-8">
-            <!-- Stats -->
-            <div class="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex items-center justify-between">
-                <div>
-                    <div class="text-gray-400 text-sm mb-1">스캔된 파일</div>
-                    <div class="text-3xl font-bold text-white"><span id="totalCount">0</span><span class="text-sm text-gray-500 ml-1">개</span></div>
+        <div id="dashboard" class="hidden flex-col gap-4 mb-8">
+            <!-- Stats & Settings -->
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- Stats -->
+                <div class="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex items-center justify-between">
+                    <div>
+                        <div class="text-gray-400 text-sm mb-1">스캔된 파일</div>
+                        <div class="text-3xl font-bold text-white"><span id="totalCount">0</span><span class="text-sm text-gray-500 ml-1">개</span></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-red-400 font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i>보정 대상: <span id="fixCount">0</span></div>
+                        <div class="text-sm text-green-500 font-medium"><i class="fa-solid fa-check-circle mr-1"></i>정상: <span id="passCount">0</span></div>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-sm text-red-400 font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i>보정 대상: <span id="fixCount">0</span></div>
-                    <div class="text-sm text-green-500 font-medium"><i class="fa-solid fa-check-circle mr-1"></i>정상: <span id="passCount">0</span></div>
+
+                <!-- Speed Control (New Feature) -->
+                <div class="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-gray-400 text-sm font-bold"><i class="fa-solid fa-gauge-high mr-2"></i>작업 속도 (동시 처리량)</div>
+                        <span id="speedValue" class="text-orange-500 font-bold text-lg">20</span>
+                    </div>
+                    <input type="range" id="speedRange" min="1" max="100" value="20" class="w-full">
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>안정적 (저사양)</span>
+                        <span>빠름 (고사양)</span>
+                    </div>
                 </div>
             </div>
 
             <!-- Action -->
-            <div class="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex items-center justify-between">
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex items-center justify-between">
                 <div>
                     <div class="text-gray-400 text-sm mb-1">작업 준비 완료</div>
                     <div class="text-sm text-gray-300">버튼을 누르면 보정된 파일만 다운로드됩니다.</div>
@@ -96,6 +130,7 @@
         <div class="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
         <h2 class="text-2xl font-bold text-white mb-2">작업 진행 중...</h2>
         <p class="text-gray-400" id="loadingText">대기 중...</p>
+        <button onclick="cancelWork()" class="mt-6 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm text-gray-300 transition-colors">작업 중단</button>
     </div>
 
     <!-- Donation Button -->
@@ -118,8 +153,23 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
         const downloadBtn = document.getElementById('downloadBtn');
+        const speedRange = document.getElementById('speedRange');
+        const speedValue = document.getElementById('speedValue');
 
         let fileQueue = []; 
+        let isCancelled = false;
+
+        // 속도 조절 UI 이벤트
+        speedRange.addEventListener('input', (e) => {
+            speedValue.innerText = e.target.value;
+        });
+
+        // 작업 취소
+        function cancelWork() {
+            isCancelled = true;
+            loadingOverlay.classList.add('hidden');
+            alert('작업이 중단되었습니다.');
+        }
 
         // --- Drag & Drop ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -134,38 +184,32 @@
             dropZone.classList.remove('drop-active');
             loadingOverlay.classList.remove('hidden');
             loadingText.textContent = "폴더 구조 스캔 중...";
+            isCancelled = false;
 
             const items = e.dataTransfer.items;
             let files = [];
 
             if (items) {
-                // DataTransferItemList 지원 시 (폴더 처리)
                 const queue = [];
                 for (let i = 0; i < items.length; i++) {
                     const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : null;
-                    if (entry) {
-                        queue.push(traverseFileTree(entry));
-                    } else if (items[i].kind === 'file') {
-                        // 일반 파일 폴백
-                        files.push(items[i].getAsFile());
-                    }
+                    if (entry) queue.push(traverseFileTree(entry));
+                    else if (items[i].kind === 'file') files.push(items[i].getAsFile());
                 }
-                // 모든 비동기 탐색 완료 대기
                 const results = await Promise.all(queue);
                 results.forEach(f => files = files.concat(f));
             } else {
                 files = Array.from(e.dataTransfer.files);
             }
 
-            if (files.length > 0) {
-                await handleFiles(files);
-            } else {
+            if (files.length > 0) await handleFiles(files);
+            else {
                 loadingOverlay.classList.add('hidden');
                 alert("처리할 이미지 파일을 찾지 못했습니다.");
             }
         });
 
-        // --- 재귀적 폴더 탐색 함수 ---
+        // --- 재귀적 폴더 탐색 ---
         function traverseFileTree(entry) {
             return new Promise((resolve) => {
                 if (entry.isFile) {
@@ -173,17 +217,15 @@
                 } else if (entry.isDirectory) {
                     const dirReader = entry.createReader();
                     const entries = [];
-                    
                     const readEntries = () => {
                         dirReader.readEntries(async (result) => {
                             if (result.length === 0) {
-                                // 폴더 내 파일들 재귀 탐색
                                 const filePromises = entries.map(e => traverseFileTree(e));
                                 const files = await Promise.all(filePromises);
                                 resolve(files.flat());
                             } else {
                                 entries.push(...result);
-                                readEntries(); // 더 있을 수 있으므로 계속 읽기
+                                readEntries();
                             }
                         });
                     };
@@ -194,124 +236,153 @@
             });
         }
 
-        // --- 파일 입력 (폴더 선택 지원) ---
+        // --- 파일 입력 ---
         fileInput.addEventListener('change', async e => {
             if (e.target.files.length === 0) return;
             loadingOverlay.classList.remove('hidden');
             loadingText.textContent = "파일 목록 읽는 중...";
+            isCancelled = false;
             
-            // UI 렌더링을 위해 잠시 대기
             setTimeout(async () => {
                 await handleFiles(Array.from(e.target.files));
             }, 50);
         });
 
         async function handleFiles(files) {
-            // UI 초기화
             fileQueue = [];
             resultsGrid.innerHTML = '';
             dashboard.classList.remove('hidden');
             logContainer.classList.remove('hidden');
             
-            loadingText.textContent = "이미지 규격 분석 중...";
+            const CONCURRENCY = parseInt(speedRange.value) || 20;
+            loadingText.textContent = `병렬 분석 시작 (속도: ${CONCURRENCY})...`;
 
             const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-            let processed = 0;
+            let processedCount = 0;
+            const totalFiles = files.length;
+            
+            const fileList = Array.from(files);
+            let currentIndex = 0;
 
-            for (const file of files) {
-                // 확장자나 MIME 타입으로 1차 필터링
-                if (!validImageTypes.includes(file.type) && !/\.(png|jpg|jpeg|webp)$/i.test(file.name)) continue;
-
-                await new Promise((resolve) => {
-                    const img = new Image();
-                    const objectUrl = URL.createObjectURL(file);
+            const worker = async () => {
+                while (currentIndex < fileList.length && !isCancelled) {
+                    const file = fileList[currentIndex++];
                     
-					img.onload = () => {
-						// ✅ 해결: 파일 원본의 실제 픽셀 크기(naturalWidth/Height)를 사용
-						const realW = img.naturalWidth;
-						const realH = img.naturalHeight;
+                    if (!validImageTypes.includes(file.type) && !/\.(png|jpg|jpeg|webp)$/i.test(file.name)) {
+                        processedCount++;
+                        continue;
+                    }
 
-						const needsFix = (realW % 4 !== 0) || (realH % 4 !== 0);
-						let newW = realW;
-						let newH = realH;
+                    await new Promise((resolve) => {
+                        const img = new Image();
+                        const objectUrl = URL.createObjectURL(file);
+                        
+                        img.onload = () => {
+                            const realW = img.naturalWidth;
+                            const realH = img.naturalHeight;
+                            URL.revokeObjectURL(objectUrl); 
 
-						if (needsFix) {
-							newW = Math.ceil(realW / 4) * 4;
-							newH = Math.ceil(realH / 4) * 4;
-						}
+                            const needsFix = (realW % 4 !== 0) || (realH % 4 !== 0);
+                            let newW = realW;
+                            let newH = realH;
 
-						fileQueue.push({
-							file: file,
-							imgObj: img, 
-							src: objectUrl,
-							w: realW,  // 원본 크기 저장
-							h: realH,
-							needsFix: needsFix,
-							newW: newW,
-							newH: newH
-						});
-						resolve();
-					};
-                    img.onerror = resolve; 
-                    img.src = objectUrl;
-                });
-                
-                processed++;
-                if(processed % 20 === 0) loadingText.textContent = `${processed} / ${files.length} 분석 중...`;
+                            if (needsFix) {
+                                newW = Math.ceil(realW / 4) * 4;
+                                newH = Math.ceil(realH / 4) * 4;
+                            }
+
+                            fileQueue.push({
+                                file: file,
+                                w: realW,
+                                h: realH,
+                                needsFix: needsFix,
+                                newW: newW,
+                                newH: newH
+                            });
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            URL.revokeObjectURL(objectUrl);
+                            resolve();
+                        };
+                        img.src = objectUrl;
+                    });
+
+                    processedCount++;
+                    // UI 렌더링에 숨쉴 틈 주기
+                    if (processedCount % 5 === 0) {
+                        loadingText.textContent = `${processedCount} / ${totalFiles} 분석 중... (진행률: ${Math.round(processedCount/totalFiles*100)}%)`;
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+                }
+            };
+
+            const workers = Array(CONCURRENCY).fill(null).map(() => worker());
+            await Promise.all(workers);
+
+            if (!isCancelled) {
+                loadingOverlay.classList.add('hidden');
+                updateUI_Optimized();
             }
-
-            loadingOverlay.classList.add('hidden');
-            updateUI();
         }
 
-        function updateUI() {
+        function updateUI_Optimized() {
             const total = fileQueue.length;
-            const fix = fileQueue.filter(x => x.needsFix).length;
-            const pass = total - fix;
+            const fixFiles = fileQueue.filter(x => x.needsFix);
+            const fixCount = fixFiles.length;
+            const passCount = total - fixCount;
 
             document.getElementById('totalCount').innerText = total;
-            document.getElementById('fixCount').innerText = fix;
-            document.getElementById('passCount').innerText = pass;
+            document.getElementById('fixCount').innerText = fixCount;
+            document.getElementById('passCount').innerText = passCount;
             
-            if (fix === 0 && total > 0) {
+            if (fixCount === 0 && total > 0) {
                 downloadBtn.disabled = true;
                 downloadBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 downloadBtn.querySelector('span').innerText = "보정할 파일이 없습니다";
             } else {
                 downloadBtn.disabled = false;
                 downloadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                downloadBtn.querySelector('span').innerText = "보정된 파일만 ZIP 다운로드";
+                downloadBtn.querySelector('span').innerText = `보정된 파일(${fixCount}개) ZIP 다운로드`;
             }
 
-            // 결과 그리드 렌더링
             resultsGrid.innerHTML = '';
-            fileQueue.forEach(item => {
-                const card = document.createElement('div');
-                card.className = `p-3 rounded-lg border flex items-center gap-3 bg-gray-800 ${item.needsFix ? 'border-red-500/50' : 'border-green-500/30'}`;
-                
+            const displayList = fixFiles.length > 0 ? fixFiles : fileQueue.slice(0, 100);
+            
+            if (fixFiles.length > 0 && total > 200) {
+                 const notice = document.createElement('div');
+                 notice.className = "col-span-full text-center text-orange-400 p-4 font-bold bg-gray-800 rounded mb-4";
+                 notice.innerText = `⚠️ 파일이 너무 많아(${total}개) '보정 대상(${fixCount}개)'만 목록에 표시합니다.`;
+                 resultsGrid.appendChild(notice);
+            }
+
+            // HTML 문자열 빌딩으로 렌더링 속도 개선
+            let html = '';
+            displayList.forEach(item => {
                 let statusBadge = item.needsFix 
-                    ? `<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-900 text-red-200">FIX NEEDED</span>` 
+                    ? `<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-900 text-red-200">FIX</span>` 
                     : `<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-900 text-green-200">OK</span>`;
 
                 let dimText = item.needsFix
                     ? `<div class="text-xs text-red-300 mt-1">${item.w}x${item.h} <i class="fa-solid fa-arrow-right text-gray-500 mx-1"></i> <span class="text-green-400 font-bold">${item.newW}x${item.newH}</span></div>`
                     : `<div class="text-xs text-gray-500 mt-1">${item.w}x${item.h}</div>`;
 
-                card.innerHTML = `
-                    <div class="w-12 h-12 rounded bg-gray-900 overflow-hidden flex-shrink-0 relative border border-gray-700">
-                        <img src="${item.src}" class="w-full h-full object-cover">
-                        ${item.needsFix ? '<div class="absolute inset-0 bg-red-500/20"></div>' : ''}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <div class="flex justify-between items-center">
-                            <div class="truncate text-sm font-medium text-gray-200" title="${item.file.name}">${item.file.name}</div>
-                            ${statusBadge}
+                html += `
+                    <div class="p-3 rounded-lg border flex items-center gap-3 bg-gray-800 ${item.needsFix ? 'border-red-500/50' : 'border-green-500/30'}">
+                        <div class="w-12 h-12 rounded bg-gray-900 flex items-center justify-center text-2xl text-gray-600 border border-gray-700">
+                            <i class="fa-regular fa-image"></i>
                         </div>
-                        ${dimText}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex justify-between items-center">
+                                <div class="truncate text-sm font-medium text-gray-200" title="${item.file.name}">${item.file.name}</div>
+                                ${statusBadge}
+                            </div>
+                            ${dimText}
+                        </div>
                     </div>
                 `;
-                resultsGrid.appendChild(card);
             });
+            resultsGrid.innerHTML = html;
         }
 
         async function processAndDownload() {
@@ -319,55 +390,87 @@
             if (filesToFix.length === 0) return alert('보정이 필요한 파일이 없습니다.');
 
             loadingOverlay.classList.remove('hidden');
+            isCancelled = false;
+            
             const zip = new JSZip();
-            
-            // 캔버스 생성 (한 번 생성해서 재사용)
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d', { willReadFrequently: true }); // 성능 최적화
+            const CONCURRENCY = parseInt(speedRange.value) || 20;
+            let processedCount = 0;
+            const total = filesToFix.length;
 
-            for (let i = 0; i < filesToFix.length; i++) {
-                const item = filesToFix[i];
-                loadingText.textContent = `변환 및 압축 중... (${i + 1} / ${filesToFix.length})`;
+            loadingText.textContent = `변환 시작 (속도: ${CONCURRENCY})...`;
 
-                // 캔버스 크기 조정
-                canvas.width = item.newW;
-                canvas.height = item.newH;
-                
-                // [중요] 캔버스 초기화 (투명 배경 유지의 핵심)
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // 리사이징 품질 설정
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                
-                // 이미지 그리기 (리사이징)
-                ctx.drawImage(item.imgObj, 0, 0, item.newW, item.newH);
+            const fixList = [...filesToFix];
+            let currentIndex = 0;
 
-                // 원본 파일 형식 결정 (PNG는 무조건 PNG로, 그 외엔 PNG 권장하나 원본 따라감)
-                let mimeType = item.file.type;
-                if (item.file.name.toLowerCase().endsWith('.png')) {
-                    mimeType = 'image/png'; // PNG 강제 (투명도 보존)
+            const worker = async () => {
+                // 워커마다 전용 캔버스 생성
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+                while (currentIndex < fixList.length && !isCancelled) {
+                    const index = currentIndex++;
+                    const item = fixList[index];
+
+                    // 이미지 로드
+                    const img = new Image();
+                    const tempUrl = URL.createObjectURL(item.file);
+                    
+                    try {
+                        await new Promise((resolve, reject) => {
+                            img.onload = resolve;
+                            img.onerror = reject;
+                            img.src = tempUrl;
+                        });
+
+                        // 그리기
+                        canvas.width = item.newW;
+                        canvas.height = item.newH;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, item.newW, item.newH);
+
+                        let mimeType = item.file.type;
+                        if (item.file.name.toLowerCase().endsWith('.png')) mimeType = 'image/png';
+
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, 0.95));
+                        zip.file(item.file.name, blob);
+
+                    } catch (err) {
+                        console.error("이미지 처리 실패:", item.file.name, err);
+                    } finally {
+                        URL.revokeObjectURL(tempUrl);
+                    }
+
+                    processedCount++;
+                    if (processedCount % 2 === 0) {
+                        loadingText.textContent = `변환 및 압축 중... (${processedCount} / ${total}) - 속도: ${CONCURRENCY}`;
+                        // UI 렌더링 양보
+                        await new Promise(r => setTimeout(r, 0));
+                    }
                 }
+            };
 
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, 0.95));
+            const workers = Array(CONCURRENCY).fill(null).map(() => worker());
+            await Promise.all(workers);
+
+            if (!isCancelled) {
+                loadingText.textContent = "ZIP 파일 생성 중...";
+                const content = await zip.generateAsync({ type: "blob" });
                 
-                // 원본 파일명 그대로 저장 (덮어쓰기 용이하도록)
-                zip.file(item.file.name, blob);
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = "Bongha_Fixed.zip";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // 메모리 해제
+                setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+                loadingOverlay.classList.add('hidden');
+                setTimeout(() => alert(`변환 완료! ${filesToFix.length}개의 파일이 처리되었습니다.`), 100);
             }
-
-            loadingText.textContent = "ZIP 파일 생성 중...";
-            const content = await zip.generateAsync({ type: "blob" });
-            
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = "Bongha_Fixed.zip";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            loadingOverlay.classList.add('hidden');
-            
-            setTimeout(() => alert(`변환 완료! ${filesToFix.length}개의 파일이 처리되었습니다.\n압축을 풀어 Bongha 폴더에 덮어쓰세요.`), 100);
         }
     </script>
 </body>
